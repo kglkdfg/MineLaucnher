@@ -32,7 +32,9 @@ public sealed class VanillaVersionMetadataTests
     [Fact]
     public void ParsesArtifactAndPlatformNativeClassifier()
     {
-        var json = JsonNode.Parse("""
+        var osKey = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "osx" : "linux";
+        var classifier = "natives-" + osKey;
+        var jsonText = """
         {
           "id":"1.20.1","mainClass":"Main",
           "libraries":[
@@ -46,12 +48,13 @@ public sealed class VanillaVersionMetadataTests
             }
           ]
         }
-        """)!.AsObject();
+        """.Replace("natives-linux", classifier).Replace("\"linux\"", "\"" + osKey + "\"");
+        var json = JsonNode.Parse(jsonText)!.AsObject();
 
         var version = VersionManifestService.ParseVersion(json);
 
         Assert.Contains(version.Libraries, x => x.Classifier is null && x.Url == "https://example.test/demo.jar");
-        Assert.Contains(version.Libraries, x => x.Classifier == "natives-linux" && x.Url == "https://example.test/native.jar");
+        Assert.Contains(version.Libraries, x => x.Classifier == classifier && x.Url == "https://example.test/native.jar");
     }
 
     [Fact]
