@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MineLauncher.Models;
 using MineLauncher.Services.Abstractions;
+using MineLauncher.Services.Implementations;
 
 namespace MineLauncher.ViewModels;
 
