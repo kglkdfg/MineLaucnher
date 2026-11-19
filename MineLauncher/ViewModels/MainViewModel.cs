@@ -15,6 +15,7 @@ namespace MineLauncher.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly IAuthService _auth;
+    private readonly OfflineAuthService _offlineAuth;
     private readonly IJavaManager _java;
     private readonly ILauncherService _launcher;
     private readonly IVersionManifestService _manifest;
@@ -54,15 +55,16 @@ public partial class MainViewModel : ObservableObject
 
     // ---------- Инициализация ----------
     public MainViewModel(
-        IAuthService auth, IJavaManager java, ILauncherService launcher,
+        IAuthService auth, OfflineAuthService offlineAuth, IJavaManager java, ILauncherService launcher,
         IVersionManifestService manifest, ILoaderVersionService loaderVersions,
         IInstanceRepository instances)
     {
-        _auth = auth; _java = java; _launcher = launcher;
+        _auth = auth; _offlineAuth = offlineAuth; _java = java; _launcher = launcher;
         _manifest = manifest; _loaderVersions = loaderVersions;
         _dispatcher = Dispatcher.CurrentDispatcher;
 
         foreach (var i in instances.LoadAll()) Instances.Add(i);
+        SelectedInstance = Instances.FirstOrDefault();
         _auth.AuthenticationChanged += (_, s) =>
             _dispatcher.Invoke(() => AccountStatus =
                 s is null ? "Не авторизован" : $"{s.Nickname} ({s.Mode})");
@@ -136,6 +138,8 @@ public partial class MainViewModel : ObservableObject
         {
             // Выбор реализации происходит в DI-корневом провайдере по AuthMode,
             // либо здесь — через фабрику IAuthServiceFactory.
+            // Online Microsoft auth is not implemented yet; use the nickname entered in the UI.
+            _offlineAuth.Nickname = OfflineNickname;
             var result = await _auth.LoginAsync(ct);
             AccountStatus = result.Success
                 ? $"{result.Session!.Nickname} ({result.Session.Mode})"
