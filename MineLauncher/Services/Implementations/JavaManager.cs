@@ -43,7 +43,8 @@ public sealed partial class JavaManager : IJavaManager
         static int MapRelease(int minor, int patch) => minor switch
         {
             <= 16 => 8,
-            17 or 18 or 19 => 17,
+            17 => 16,
+            18 or 19 => 17,
             20 => patch >= 5 ? 21 : 17,
             _ => 21
         };
