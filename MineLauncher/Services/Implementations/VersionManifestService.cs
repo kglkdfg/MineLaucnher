@@ -63,7 +63,30 @@ public sealed class VersionManifestService : IVersionManifestService
                 : ClassifierPath(lib.Name, lib.Classifier);
             var target = SafeCombine(Path.Combine(_root, "libraries"), relative);
             await _download.DownloadFileAsync(lib.Url!, target, expectedSha1: lib.Sha1, expectedSize: lib.Size, ct: ct);
+            if (lib.Classifier is not null)
+                await ExtractNativeArchiveAsync(target, Path.Combine(_root, "versions", version.Id, "natives"), ct);
             progress?.Invoke((i + 1d) / Math.Max(1, selected.Length) * 100);
+        }
+    }
+
+    private static async Task ExtractNativeArchiveAsync(string archivePath, string destination, CancellationToken ct)
+    {
+        Directory.CreateDirectory(destination);
+        var root = Path.GetFullPath(destination) + Path.DirectorySeparatorChar;
+        await using var stream = File.OpenRead(archivePath);
+        using var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read);
+        foreach (var entry in zip.Entries)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (entry.FullName.StartsWith("META-INF/", StringComparison.OrdinalIgnoreCase)) continue;
+            var path = Path.GetFullPath(Path.Combine(destination, entry.FullName));
+            if (!path.StartsWith(root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                throw new InvalidDataException("Native archive entry escapes the natives directory.");
+            if (string.IsNullOrEmpty(entry.Name)) { Directory.CreateDirectory(path); continue; }
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await using var input = entry.Open();
+            await using var output = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
+            await input.CopyToAsync(output, ct);
         }
     }
 
