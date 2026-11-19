@@ -262,7 +262,7 @@ public sealed partial class JavaManager : IJavaManager
                         throw new InvalidDataException("ZIP entry escapes the Java runtime directory.");
                     if (string.IsNullOrEmpty(entry.Name)) { Directory.CreateDirectory(destination); continue; }
                     Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                    System.IO.Compression.ZipFileExtensions.ExtractToFile(entry, destination, overwrite: true);
+                    entry.ExtractToFile(destination, overwrite: true);
                 }
             }
         }, ct);

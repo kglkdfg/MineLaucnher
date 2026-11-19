@@ -25,12 +25,7 @@ public sealed class LauncherService : ILauncherService, IDisposable
 
     public bool IsGameRunning => _gameProcess is { HasExited: false };
 
-    public async IAsyncEnumerable<string> GameOutput(
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var line in _logChannel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
-            yield return line;
-    }
+    public IAsyncEnumerable<string> GameOutput => _logChannel.Reader.ReadAllAsync();
 
     public async Task<LaunchResult> LaunchAsync(
         LaunchOptions options, IProgress<LaunchPhase> progress, CancellationToken ct = default)
