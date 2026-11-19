@@ -61,7 +61,7 @@ public static class LaunchCommandBuilder
         string gameDir, LaunchOptions o)
     {
         string classpath = string.Join(IO_CLASSPATH_SEPARATOR,
-            v.Libraries.Where(l => l.AppliesToCurrentOs()).Select(l => Path.Combine(libsRoot,
+            v.Libraries.Where(l => l.AppliesToCurrentOs() && l.Classifier is null).Select(l => Path.Combine(libsRoot,
                 MavenPathResolver.ToRelativePath(l.Name)))
             .Append(Path.Combine(LauncherPaths.VersionsDir, v.Id, $"{v.Id}.jar")));
 
@@ -76,7 +76,7 @@ public static class LaunchCommandBuilder
             ["auth_access_token"] = s.AccessToken,            // "0" в offline — сервера online-mode это устроят? нет; но локальные — да
             ["user_type"]         = s.Mode == AuthMode.Online ? "msa" : "legacy",
             ["version_type"]      = v.Type,                   // "release" / "snapshot"
-            ["natives_directory"] = Path.Combine(gameDir, "natives"),
+            ["natives_directory"] = Path.Combine(LauncherPaths.VersionsDir, v.Id, "natives"),
             ["launcher_name"]     = "MineLauncher",
             ["launcher_version"]  = "1.0.0",
             ["classpath"]         = classpath,
