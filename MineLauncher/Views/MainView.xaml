@@ -41,7 +41,7 @@
    <Border Grid.Row="1" Background="#20232B" BorderBrush="#303541" BorderThickness="1" CornerRadius="9" Padding="16" Margin="0,0,0,15">
     <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
      <StackPanel><TextBlock Text="АККАУНТ" Style="{StaticResource Label}"/><StackPanel Orientation="Horizontal">
-      <ComboBox Width="150" Height="34" SelectedIndex="{Binding AuthModeIndex}" Background="#303541" Foreground="#F2F3F7"><ComboBoxItem Content="Offline"/><ComboBoxItem Content="Microsoft"/></ComboBox>
+      <Border Width="150" Height="34" Background="#303541" BorderBrush="#414858" BorderThickness="1" CornerRadius="3" Padding="9,8"><TextBlock Text="Offline account" Foreground="#F2F3F7" FontSize="11"/></Border>
       <TextBox Width="150" Height="34" Margin="8,0,0,0" Padding="8,7" Text="{Binding OfflineNickname, UpdateSourceTrigger=PropertyChanged}" Background="#303541" Foreground="White" BorderBrush="#414858"/>
       <Button Content="Войти" Command="{Binding LoginCommand}" Margin="8,0,0,0" Padding="12,6" Background="#303541" Foreground="White" BorderBrush="#414858"/>
      </StackPanel></StackPanel>
