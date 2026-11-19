@@ -30,8 +30,8 @@ public sealed partial class JavaManager : IJavaManager
         //   1.18 – 1.20.4            -> Java 17
         //   1.20.5+                  -> Java 21
         //   Snapshot/Pre-release     -> парсим номер minors из "23w31a"-подобных id
-        if (TryParseRelease(minecraftVersionId, out var major, out var minor))
-            return MapRelease(minor);
+        if (TryParseRelease(minecraftVersionId, out var minor, out var patch))
+            return MapRelease(minor, patch);
 
         if (TryParseSnapshot(minecraftVersionId, out var year, out var week))
             return MapSnapshot(year, week);
@@ -40,12 +40,11 @@ public sealed partial class JavaManager : IJavaManager
         // как старая Java сломает новые.
         return 21;
 
-        static int MapRelease(int minor) => minor switch
+        static int MapRelease(int minor, int patch) => minor switch
         {
             <= 16 => 8,
-            17 => 17,          // 1.17 официально требует 16, но 17 — безопасный superset
-            <= 20 => 17,       // 1.18–1.20.x
-            >= 21 => 21,       // 1.20.5+ фактически перешёл на 21; 1.21+ точно 21
+            17 or 18 or 19 => 17,
+            20 => patch >= 5 ? 21 : 17,
             _ => 21
         };
     }
@@ -54,24 +53,25 @@ public sealed partial class JavaManager : IJavaManager
     {
         // Снимки используют ту же Java, что и следующий релиз:
         // 21w* / 1.* снапшоты до 1.17 -> 8; 22w*/23w* -> 17/21 по году.
-        if (year <= 21) return 8;
-        if (year == 22) return 17;
-        if (year == 23 && week <= 13) return 17; // переход на Java 21 произошёл в 1.20.5 (24w03a+)
+        if (year < 21 || (year == 21 && week < 11)) return 8;
+        if (year == 21) return 16;
+        if (year <= 23) return 17;
         return 21;
     }
 
-    [GeneratedRegex(@"^1\.(?:(\d{1,2})(?:\.(\d{1,2}))?)")]
+    [GeneratedRegex(@"^1\.(\d{1,2})(?:\.(\d{1,2}))?")]
     private static partial Regex ReleasePattern();
 
     [GeneratedRegex(@"^(\d{2})w(\d{2})[a-z]$")]
     private static partial Regex SnapshotPattern();
 
-    private static bool TryParseRelease(string id, out int major, out int minor)
+    private static bool TryParseRelease(string id, out int minor, out int patch)
     {
-        major = minor = -1;
+        minor = patch = -1;
         var m = ReleasePattern().Match(id);
         if (!m.Success) return false;
         minor = int.Parse(m.Groups[1].Value);
+        patch = m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : 0;
         return true;
     }
 
@@ -182,12 +182,18 @@ public sealed partial class JavaManager : IJavaManager
         // API Adoptium отдаёт последний GA release нужной мажорной версии для текущей ОС/архитектуры.
         string os = OperatingSystem.IsWindows() ? "windows"
                   : OperatingSystem.IsMacOS() ? "mac" : "linux";
-        string arch = Environment.Is64BitProcess ? "x64" : "aarch64";
+        string arch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture switch
+        {
+            System.Runtime.InteropServices.Architecture.X64 => "x64",
+            System.Runtime.InteropServices.Architecture.Arm64 => "aarch64",
+            System.Runtime.InteropServices.Architecture.X86 => "x86",
+            _ => throw new PlatformNotSupportedException("Unsupported CPU architecture.")
+        };
         string url =
             $"https://api.adoptium.net/v3/binary/latest/{required}/ga/{os}/{arch}/jre/hotspot/normal/eclipse";
 
         string targetDir = Path.Combine(LauncherPaths.RuntimeDir, $"jre-{required}");
-        string archivePath = Path.Combine(LauncherPaths.RuntimeDir, $"jre-{required}.zip");
+        string archivePath = Path.Combine(LauncherPaths.RuntimeDir, OperatingSystem.IsWindows() ? $"jre-{required}.zip" : $"jre-{required}.tar.gz");
         Directory.CreateDirectory(LauncherPaths.RuntimeDir);
 
         await _download.DownloadFileAsync(url, archivePath, downloadProgress, ct: ct);
@@ -220,29 +226,44 @@ public sealed partial class JavaManager : IJavaManager
     private static Task ExtractArchiveAsync(string archive, string target, CancellationToken ct)
         => Task.Run(() =>
         {
-            if (archive.EndsWith(".gz"))
+            Directory.CreateDirectory(target);
+            var root = Path.GetFullPath(target) + Path.DirectorySeparatorChar;
+            void ExtractTar(Stream input)
             {
-                using var gz = new ICSharpCode.SharpZipLib.GZip.GZipInputStream(
-                    File.OpenRead(archive));
-                using var tar = new ICSharpCode.SharpZipLib.Tar.TarInputStream(gz,
-                    new ICSharpCode.SharpZipLib.Tar.TarArchive());
-                TarEntry entry;
-                while ((entry = tar.GetNextEntry()!) is not null)
+                using var reader = new System.Formats.Tar.TarReader(input);
+                System.Formats.Tar.TarEntry? entry;
+                while ((entry = reader.GetNextEntry()) is not null)
                 {
                     ct.ThrowIfCancellationRequested();
-                    string path = Path.Combine(target, entry.Name); // TarArchive корректно для UTF-8 имён
-                    if (entry.IsDirectory) Directory.CreateDirectory(path);
-                    else
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                        using var fs = File.Create(path);
-                        tar.CopyEntries(fs);
-                    }
+                    var destination = Path.GetFullPath(Path.Combine(target, entry.Name.Replace('/', Path.DirectorySeparatorChar)));
+                    if (!destination.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("Archive path escapes the Java runtime directory.");
+                    if (entry.EntryType == System.Formats.Tar.TarEntryType.Directory) { Directory.CreateDirectory(destination); continue; }
+                    if (entry.EntryType is not (System.Formats.Tar.TarEntryType.RegularFile or System.Formats.Tar.TarEntryType.V7RegularFile)) continue;
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    using var output = File.Create(destination);
+                    entry.DataStream?.CopyTo(output);
                 }
+            }
+            if (archive.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+            {
+                using var file = File.OpenRead(archive);
+                using var gzip = new System.IO.Compression.GZipStream(file, System.IO.Compression.CompressionMode.Decompress);
+                ExtractTar(gzip);
             }
             else
             {
-                System.IO.Compression.ZipFile.ExtractToDirectory(archive, target, overwrite: true);
+                using var zip = System.IO.Compression.ZipFile.OpenRead(archive);
+                foreach (var entry in zip.Entries)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var destination = Path.GetFullPath(Path.Combine(target, entry.FullName));
+                    if (!destination.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("ZIP entry escapes the Java runtime directory.");
+                    if (string.IsNullOrEmpty(entry.Name)) { Directory.CreateDirectory(destination); continue; }
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    entry.ExtractToFile(destination, overwrite: true);
+                }
             }
         }, ct);
 

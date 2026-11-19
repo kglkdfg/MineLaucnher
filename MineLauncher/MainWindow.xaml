@@ -1,0 +1,1 @@
+<Window x:Class="MineLauncher.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:views="clr-namespace:MineLauncher.Views" Title="MineLauncher" Width="900" Height="620" MinWidth="720" MinHeight="480" Background="#FF171A20"><views:MainView/></Window>

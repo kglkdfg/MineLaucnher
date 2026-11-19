@@ -171,6 +171,8 @@ public sealed class ForgeLoaderProvider : LoaderProviderBase
 public static class MavenPathResolver
 {
     // "com.mojang:patchy:1.3.9" -> libraries/com/mojang/patchy/1.3.9/patchy-1.3.9.jar
+    public static string ToRelativePath(string coords) => Resolve("", coords).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
     public static string Resolve(string librariesRoot, string coords)
     {
         var p = coords.Split(':');

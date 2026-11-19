@@ -57,7 +57,7 @@ public static class LauncherPaths
 {
     /// <summary>Корень лаунчера. ВАЖНО: может содержать пробелы и кириллицу!</summary>
     public static string Root { get; } =
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/MineLauncher";
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MineLauncher");
 
     public static string VersionsDir   => Path.Combine(Root, "versions");
     public static string LibrariesDir  => Path.Combine(Root, "libraries");
