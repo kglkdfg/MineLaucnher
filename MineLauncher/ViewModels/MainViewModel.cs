@@ -47,6 +47,7 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LaunchGameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(InstallGameCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoginCommand))]
     private bool _isBusy;
 
@@ -150,6 +151,66 @@ public partial class MainViewModel : ObservableObject
     }
 
     private bool CanLogin() => !IsBusy && _auth.CurrentSession is null;
+
+    [RelayCommand(CanExecute = nameof(CanInstall))]
+    private async Task InstallGameAsync(CancellationToken ct)
+    {
+        if (SelectedInstance is null || string.IsNullOrWhiteSpace(SelectedVersion)) return;
+
+        IsBusy = true;
+        ProgressValue = 0;
+        ProgressText = "Подготовка установки…";
+        try
+        {
+            // Получаем официальные метаданные и клиентский JAR.
+            var version = await _manifest.GetVersionAsync(SelectedVersion, ct);
+            ProgressValue = 15;
+            ProgressText = "Проверка Java…";
+            var runtime = await _java.EnsureRuntimeAsync(SelectedVersion,
+                new Progress<double>(p =>
+                {
+                    ProgressValue = 15 + p * 0.25;
+                    ProgressText = $"Загрузка Java… {p:0}%";
+                }), ct);
+
+            ProgressText = "Загрузка библиотек…";
+            await _manifest.DownloadLibrariesAsync(version, p =>
+            {
+                ProgressValue = 40 + p * 0.35;
+                ProgressText = $"Загрузка библиотек… {p:0}%";
+            }, ct);
+
+            ProgressText = "Загрузка игровых ресурсов…";
+            await _manifest.DownloadAssetsAsync(version, p =>
+            {
+                ProgressValue = 75 + p * 0.24;
+                ProgressText = $"Загрузка ресурсов… {p:0}%";
+            }, ct);
+
+            Directory.CreateDirectory(SelectedInstance.GameDirectory);
+            SelectedInstance.MinecraftVersion = SelectedVersion;
+            SelectedInstance.Loader = LoaderType.Vanilla;
+            ProgressValue = 100;
+            ProgressText = $"Minecraft {SelectedVersion} установлен. Java {runtime.MajorVersion} готова.";
+        }
+        catch (OperationCanceledException)
+        {
+            ProgressText = "Установка отменена.";
+        }
+        catch (Exception ex)
+        {
+            ProgressText = $"Ошибка установки: {ex.Message}";
+            GameLog += $"[INSTALL ERROR] {ex}{Environment.NewLine}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private bool CanInstall() =>
+        !IsBusy && SelectedInstance is not null && !string.IsNullOrWhiteSpace(SelectedVersion)
+        && SelectedLoader == LoaderType.Vanilla;
 
     [RelayCommand(CanExecute = nameof(CanLaunch))]
     private async Task LaunchGameAsync()
