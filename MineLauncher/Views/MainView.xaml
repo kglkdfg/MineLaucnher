@@ -64,7 +64,7 @@
    </Grid>
   </Grid>
   <Border Grid.Column="1" Grid.Row="1" Background="#20232B" BorderBrush="#303541" BorderThickness="0,1,0,0" Padding="22,12">
-   <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel VerticalAlignment="Center"><ProgressBar Value="{Binding ProgressValue}" Height="5" Maximum="100" Background="#343A47" Foreground="#8B75E8" BorderThickness="0"/><TextBlock Text="{Binding ProgressText, TargetNullValue=Готов к запуску}" Foreground="#9299A8" FontSize="10" Margin="0,6,0,0"/></StackPanel><Button Grid.Column="1" Content="▶   ИГРАТЬ" Command="{Binding LaunchGameCommand}" Style="{StaticResource Play}" Margin="20,0,0,0"/></Grid>
+   <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel VerticalAlignment="Center"><ProgressBar Value="{Binding ProgressValue}" Height="5" Maximum="100" Background="#343A47" Foreground="#8B75E8" BorderThickness="0"/><TextBlock Text="{Binding ProgressText, TargetNullValue=Готов к запуску}" Foreground="#9299A8" FontSize="10" Margin="0,6,0,0"/></StackPanel><Button Grid.Column="1" Content="↓   УСТАНОВИТЬ" Command="{Binding InstallGameCommand}" Margin="14,0,0,0" Padding="16,8" Height="44" Background="#303541" Foreground="#E8EAF0" BorderBrush="#414858" BorderThickness="1" FontWeight="SemiBold"/><Button Grid.Column="2" Content="▶   ИГРАТЬ" Command="{Binding LaunchGameCommand}" Style="{StaticResource Play}" Margin="10,0,0,0"/></Grid>
   </Border>
  </Grid>
 </UserControl>
