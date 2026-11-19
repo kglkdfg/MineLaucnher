@@ -80,7 +80,7 @@ public sealed partial class JavaManager : IJavaManager
         year = week = -1;
         var m = SnapshotPattern().Match(id);
         if (!m.Success) return false;
-        year = 2000 + int.Parse(m.Groups[1].Value);
+        year = int.Parse(m.Groups[1].Value);
         week = int.Parse(m.Groups[2].Value);
         return true;
     }
