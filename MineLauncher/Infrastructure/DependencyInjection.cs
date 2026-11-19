@@ -12,7 +12,8 @@ public static class DependencyInjection
   s.AddSingleton<HttpClient>();
   s.AddSingleton<IDownloadService, DownloadService>();
   s.AddSingleton<IJavaManager, JavaManager>();
-  s.AddSingleton<IAuthService>(_ => new OfflineAuthService());
+  s.AddSingleton<OfflineAuthService>();
+  s.AddSingleton<IAuthService>(sp => sp.GetRequiredService<OfflineAuthService>());
   s.AddSingleton<IInstanceRepository, InstanceRepository>();
   s.AddSingleton<IVersionManifestService, VersionManifestService>();
   s.AddSingleton<ILoaderVersionService, LoaderVersionService>();
