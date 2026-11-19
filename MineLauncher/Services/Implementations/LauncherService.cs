@@ -73,6 +73,7 @@ public sealed class LauncherService : ILauncherService, IDisposable
                 assetsRoot: LauncherPaths.AssetsDir, librariesRoot: LauncherPaths.LibrariesDir,
                 gameDir: instance.GameDirectory);
 
+            Directory.CreateDirectory(instance.GameDirectory);
             var psi = new ProcessStartInfo
             {
                 FileName = runtime.ExecutablePath,   // пробелы/кириллица в пути безопасны:
