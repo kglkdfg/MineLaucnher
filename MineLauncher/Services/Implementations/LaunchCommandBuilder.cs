@@ -61,7 +61,7 @@ public static class LaunchCommandBuilder
         string gameDir, LaunchOptions o)
     {
         string classpath = string.Join(IO_CLASSPATH_SEPARATOR,
-            v.Libraries.Where(l => l.AppliesToCurrentOs()).Select(l => Path.Combine(libsRoot,
+            v.Libraries.Where(l => l.AppliesToCurrentOs() && l.Classifier is null).Select(l => Path.Combine(libsRoot,
                 MavenPathResolver.ToRelativePath(l.Name)))
             .Append(Path.Combine(LauncherPaths.VersionsDir, v.Id, $"{v.Id}.jar")));
 
@@ -76,7 +76,7 @@ public static class LaunchCommandBuilder
             ["auth_access_token"] = s.AccessToken,            // "0" в offline — сервера online-mode это устроят? нет; но локальные — да
             ["user_type"]         = s.Mode == AuthMode.Online ? "msa" : "legacy",
             ["version_type"]      = v.Type,                   // "release" / "snapshot"
-            ["natives_directory"] = Path.Combine(gameDir, "natives"),
+            ["natives_directory"] = Path.Combine(LauncherPaths.VersionsDir, v.Id, "natives"),
             ["launcher_name"]     = "MineLauncher",
             ["launcher_version"]  = "1.0.0",
             ["classpath"]         = classpath,
@@ -101,8 +101,15 @@ public record ArgumentRule(IReadOnlyList<string> Value, IReadOnlyList<OsRule> Ru
 {
     public IEnumerable<string> Resolve(Dictionary<string, string?> placeholders)
     {
-        if (Rules.Count > 0 && !Rules.Any(r => r.AllowsCurrentOs()))
-            return [];
+        if (Rules.Count > 0)
+        {
+            var hasAllow = Rules.Any(r => r.Action == "allow");
+            var allowed = !hasAllow;
+            foreach (var rule in Rules)
+                if (rule.MatchesCurrentEnvironment())
+                    allowed = rule.Action == "allow";
+            if (!allowed) return [];
+        }
 
         return Value.Select(v => SubstitutionRegex.Replace(v, m =>
             placeholders.TryGetValue(m.Groups[1].Value, out var val) ? val ?? "" : m.Value));
@@ -112,13 +119,20 @@ public record ArgumentRule(IReadOnlyList<string> Value, IReadOnlyList<OsRule> Ru
         new(@"\$\{(\w+)\}", System.Text.RegularExpressions.RegexOptions.Compiled);
 }
 
-public record OsRule(string? Name, string? Version, string? Arch)
+public record OsRule(string? Name, string? Version, string? Arch, string Action = "allow")
 {
-    public bool AllowsCurrentOs()
+    public bool MatchesCurrentEnvironment()
     {
-        if (Name is null) return true;
         string current = OperatingSystem.IsWindows() ? "windows"
                        : OperatingSystem.IsMacOS() ? "osx" : "linux";
-        return Name == current;
+        if (Name is not null && !string.Equals(Name, current, StringComparison.OrdinalIgnoreCase)) return false;
+        if (Arch is not null && !System.Text.RegularExpressions.Regex.IsMatch(
+            System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant(), Arch))
+            return false;
+        if (Version is not null && !System.Text.RegularExpressions.Regex.IsMatch(Environment.OSVersion.Version.ToString(), Version))
+            return false;
+        return true;
     }
+
+    public bool AllowsCurrentOs() => Action == "allow" && MatchesCurrentEnvironment();
 }
