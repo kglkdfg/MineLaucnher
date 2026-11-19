@@ -123,7 +123,24 @@ public sealed class VersionManifestService : IVersionManifestService
             if (item is not JsonObject lib) continue;
             var name = (string?)lib["name"];
             if (string.IsNullOrWhiteSpace(name)) continue;
-            var os = (string?)lib["rules"]?.AsArray().LastOrDefault(x => (string?)x?["action"] == "allow")?["os"]?["name"];
+            string? os = null;
+            if (lib["rules"] is JsonArray libraryRules)
+            {
+                var allowed = false;
+                foreach (var rule in libraryRules)
+                {
+                    var ruleOs = rule?["os"];
+                    var ruleName = (string?)ruleOs?["name"];
+                    var currentOs = CurrentOsKey();
+                    if (ruleName is not null && !string.Equals(ruleName, currentOs, StringComparison.OrdinalIgnoreCase)) continue;
+                    var arch = (string?)ruleOs?["arch"];
+                    if (arch is not null && !System.Text.RegularExpressions.Regex.IsMatch(
+                        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant(), arch))
+                        continue;
+                    allowed = (string?)rule?["action"] == "allow";
+                }
+                if (!allowed) os = "__not_this_platform__";
+            }
             var artifact = lib["downloads"]?["artifact"];
             if (artifact is not null)
                 libs.Add(new(name, os, (string?)artifact["url"], (string?)artifact["sha1"], (long?)artifact["size"]));
