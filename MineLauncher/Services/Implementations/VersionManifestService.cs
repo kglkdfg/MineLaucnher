@@ -193,7 +193,8 @@ public sealed class VersionManifestService : IVersionManifestService
                 foreach (var rule in obj["rules"]?.AsArray() ?? [])
                 {
                     var os = rule?["os"];
-                    rules.Add(new((string?)os?["name"], (string?)os?["version"], (string?)os?["arch"]));
+                    rules.Add(new((string?)os?["name"], (string?)os?["version"], (string?)os?["arch"],
+                        (string?)rule?["action"] ?? "allow"));
                 }
                 result.Add(new(values, rules));
             }
