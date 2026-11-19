@@ -15,9 +15,10 @@ public sealed class MicrosoftAuthService : IAuthService
 public sealed class OfflineAuthService : IAuthService
 {
  private readonly Func<string> _nicknameProvider;
+ public string Nickname { get; set; } = "Player";
  public AuthSession? CurrentSession { get; private set; }
  public event EventHandler<AuthSession?>? AuthenticationChanged;
- public OfflineAuthService(Func<string>? nicknameProvider = null) => _nicknameProvider = nicknameProvider ?? (() => "Player");
+ public OfflineAuthService(Func<string>? nicknameProvider = null) => _nicknameProvider = nicknameProvider ?? (() => Nickname);
  public Task<AuthResult> LoginAsync(CancellationToken ct = default)
  {
   ct.ThrowIfCancellationRequested();
