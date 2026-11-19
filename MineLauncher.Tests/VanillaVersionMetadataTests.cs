@@ -76,6 +76,19 @@ public sealed class VanillaVersionMetadataTests
     }
 
     [Fact]
+    public void AppliesOrderedAllowAndDisallowArgumentRules()
+    {
+        var currentOs = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "osx" : "linux";
+        var rule = new ArgumentRule(["--platform-flag"],
+        [
+            new OsRule(null, null, null, "allow"),
+            new OsRule(currentOs, null, null, "disallow")
+        ]);
+
+        Assert.Empty(rule.Resolve(new Dictionary<string, string?>()));
+    }
+
+    [Fact]
     public void RejectsMetadataWithoutMainClass()
     {
         Assert.Throws<InvalidDataException>(() =>
