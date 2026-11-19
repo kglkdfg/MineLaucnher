@@ -1,3 +1,4 @@
+using Xunit;
 using MineLauncher.Services.Implementations;
 namespace MineLauncher.Tests;
 public sealed class JavaManagerTests
