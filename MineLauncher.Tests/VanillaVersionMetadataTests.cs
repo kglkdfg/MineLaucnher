@@ -24,9 +24,9 @@ public sealed class VanillaVersionMetadataTests
         Assert.Equal("1.21.1", version.Id);
         Assert.Equal("21", version.JavaVersion.Component);
         Assert.Equal("17", version.AssetIndex.Id);
-        Assert.Equal(123, version.AssetIndex.Size);
+        Assert.Equal(123L, version.AssetIndex.Size);
         Assert.Equal("https://example.test/client.jar", version.ClientJarUrl);
-        Assert.Equal(456, version.ClientJarSize);
+        Assert.Equal(456L, version.ClientJarSize);
     }
 
     [Fact]
@@ -76,12 +76,9 @@ public sealed class VanillaVersionMetadataTests
     }
 
     [Fact]
-    public void RejectsMismatchedManifestMetadataIdAtServiceBoundary()
+    public void RejectsMetadataWithoutMainClass()
     {
         Assert.Throws<InvalidDataException>(() =>
-        {
-            var version = VersionManifestService.ParseVersion(JsonNode.Parse("""{"id":"1.20.1","mainClass":"Main"}""")!.AsObject());
-            Assert.Equal("1.20.2", version.Id);
-        });
+            VersionManifestService.ParseVersion(JsonNode.Parse("""{"id":"1.20.1"}""")!.AsObject()));
     }
 }
