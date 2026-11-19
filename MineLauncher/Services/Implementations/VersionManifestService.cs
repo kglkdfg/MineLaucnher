@@ -126,7 +126,8 @@ public sealed class VersionManifestService : IVersionManifestService
             string? os = null;
             if (lib["rules"] is JsonArray libraryRules)
             {
-                var allowed = false;
+                var hasAllowRule = libraryRules.Any(rule => (string?)rule?["action"] == "allow");
+                var allowed = !hasAllowRule;
                 foreach (var rule in libraryRules)
                 {
                     var ruleOs = rule?["os"];
